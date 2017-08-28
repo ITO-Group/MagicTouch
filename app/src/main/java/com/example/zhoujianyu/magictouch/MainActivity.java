@@ -21,7 +21,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.StringTokenizer;
 import java.util.concurrent.ExecutionException;
 
@@ -45,21 +47,12 @@ public class MainActivity extends AppCompatActivity {
     public int capacityMat[][] = new int[rowNum][colNum];
     public int capaPos[][][] = new int[rowNum][colNum][2];
     public ArrayList<int[][]> images = new ArrayList<>();
-    public final int imageSize = 2;
+    public final int imageSize = 1;
     public double noiseGradient[][] = new double[rowNum][colNum];
     public long flushRate = 100;
-//    Handler handler = new Handler(){
-//        @Override
-//        public void handleMessage(Message msg){
-//            if(msg.what == INTOUCH){
-//                touchView.isTouch = true;
-//                touchView.postInvalidate();
-//            }
-//            else if(msg.what == OUTOFTOUCH){
-//
-//            }
-//        }
-//    };
+    public int noiseMax = 0;
+    public final int inTouchThreshold = 1200;
+    public final int outTouchThreshold = 200;
 
     public int[][] getCopyCapaMat(){
         int result[][]= new int[rowNum][colNum];
@@ -76,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 refresh();
                 images.add(getCopyCapaMat());
+                int a = 1;
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -85,16 +79,27 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
-        int gmax = 0;
+        //method 1:根据image之间的差值
+//        int gmax = 0;
+//        for(int i = 0;i<rowNum;i++){
+//            for(int j = 0;j<colNum;j++){
+//                int max = 0;
+//                for(int k = 1;k<100;k++){
+//                    int delta = Math.abs(images.get(k)[i][j]-images.get(k-1)[i][j]);
+//                    if(delta>max){max = delta;}
+//                    if(max>gmax){gmax = max;}
+//                }
+//                noiseGradient[i][j] = max;
+//            }
+//        }
+        //method2 : 根据峰值
         for(int i = 0;i<rowNum;i++){
             for(int j = 0;j<colNum;j++){
-                int max = 0;
-                for(int k = 1;k<100;k++){
-                    int delta = Math.abs(images.get(k)[i][j]-images.get(k-1)[i][j]);
-                    if(delta>max){max = delta;}
-                    if(max>gmax){gmax = max;}
+                for(int k =0;k<100;k++){
+                    if(noiseMax<images.get(k)[i][j]){
+                        noiseMax = images.get(k)[i][k];
+                    }
                 }
-                noiseGradient[i][j] = max;
             }
         }
     }
@@ -102,13 +107,12 @@ public class MainActivity extends AppCompatActivity {
     Runnable mRunnable = new Runnable(){
         @Override
         public void run(){
-            measureNoise();
+            //measureNoise();
             while(true){
                 try {
                     images.clear();
                     for(int i = 0;i<imageSize;i++){
                         refresh();
-                        Thread.sleep(flushRate);
                         images.add(getCopyCapaMat());
                     }
                     touchView.getDrawData(getDrawPixel());
@@ -124,22 +128,15 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-//    private View.OnTouchListener touchListener = new View.OnTouchListener() {
-//        @Override
-//        public boolean onTouch(View view, MotionEvent motionEvent) {
-//            EdgeTouchView ev = (EdgeTouchView)view;
-//            //Log.e(TAG,String.valueOf(touchTime++));
-//            ev.isTouch = true;
-//            try {
-//                refresh();
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//            ev.getDrawData(getDrawPixel());
-//            ev.postInvalidate();
-//            return true;
-//        }
-//    };
+    private View.OnTouchListener touchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View view, MotionEvent motionEvent) {
+            EdgeTouchView ev = (EdgeTouchView)view;
+            ev.isInTouch = true;
+            ev.postInvalidate();
+            return true;
+        }
+    };
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -166,14 +163,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         touchView = (EdgeTouchView) findViewById(R.id.touch);
-        //touchView.setOnTouchListener(this.touchListener);
         getScreenSize();
         calPixelSize();
         getPixelPos();
-        measureNoise();
         Thread thread = new Thread(mRunnable);
         thread.start();
-
 
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
@@ -226,16 +220,10 @@ public class MainActivity extends AppCompatActivity {
         }
         return rawData;
     }
-//    @Override
-//    public void onWindowFocusChanged(boolean hasFocus){
-//        super.onWindowFocusChanged(hasFocus);
-//        int loc[] = new int[2];
-//        touchView.getLocationOnScreen(loc);
-//        touchViewX = loc[0];
-//        touchViewY = loc[1];
-//    }
 
-    public int getTouchType(int s[],int x,int y){
+
+    public int getTouchType1(int s[],int x,int y){
+        //method 1:根据差值
             int maxDelta = 0;
             for(int i = 1;i<s.length;i++){
                 int delta = Math.abs(s[i]-s[i-1]);
@@ -243,35 +231,89 @@ public class MainActivity extends AppCompatActivity {
                     maxDelta = delta;
                 }
             }
-            if(maxDelta>50*noiseGradient[x][y]){
+            if(maxDelta>=10*noiseGradient[x][y]){
                 Log.e(TAG,"in touch!!!");
                 return 0;//intouch
             }
-            else if(maxDelta > 10*noiseGradient[x][y]){
+            else if(maxDelta > 5*noiseGradient[x][y]){
                 Log.e(TAG,"out of touch!!!");
                 return 1;//outoftouch
             }
-
         return -1;  //no touch
+    }
+
+    public boolean canExtend(ArrayList<int[]>list,int state[][]){
+        for(int i = 0;i<list.size();i++){
+            int[] node = list.get(i);
+            int x = node[0];int y = node[1];
+            if(x-1>0){if(state[x-1][y]==0){return true;}}
+            if(x+1<rowNum){if(state[x+1][y]==0){return true;}}
+            if(y-1>0){if(state[x][y-1]==0){return true;}}
+            if(y+1<colNum){if(state[x][y+1]==0){return true;}}
+        }
+        return false;
     }
 
     public ArrayList<MyRect> getDrawPixel(){
         ArrayList<MyRect> rects = new ArrayList<>();
+        //根据跳变
+//        for(int i = 0;i<this.rowNum;i++){
+//            for(int j = 0;j<this.colNum;j++){
+//                int sequence[] = new int[this.imageSize];
+//                for(int k = 0;k<this.imageSize;k++){
+//                   sequence[k] = images.get(k)[i][j];
+//                }
+//                int type = getTouchType(sequence,i,j);
+//                if(type == 0){
+//                    rects.add(new MyRect(capaPos[i][j][0],capaPos[i][j][1],capaPos[i][j][0]+pixelWidth,capaPos[i][j][1]+pixelHight,capacityMat[i][j],0));
+//                }
+//                else if(type == 1){
+//                    rects.add(new MyRect(capaPos[i][j][0],capaPos[i][j][1],capaPos[i][j][0]+pixelWidth,capaPos[i][j][1]+pixelHight,capacityMat[i][j],1));
+//                }
+//            }
+//        }
+        //根据峰值
+        int[][]state = new int[rowNum][colNum];
         for(int i = 0;i<this.rowNum;i++){
             for(int j = 0;j<this.colNum;j++){
-                int sequence[] = new int[this.imageSize];
-                for(int k = 0;k<this.imageSize;k++){
-                   sequence[k] = images.get(k)[i][j];
+                if(capacityMat[i][j]>inTouchThreshold){
+                    state[i][j] = 1;
+                    //rects.add(new MyRect(capaPos[i][j][0],capaPos[i][j][1],capaPos[i][j][0]+pixelWidth,capaPos[i][j][1]+pixelHight,capacityMat[i][j],0));
                 }
-                int type = getTouchType(sequence,i,j);
-                if(type == 0){
+            }
+        }
+        boolean extend = true;
+        while(extend){
+            extend = false;
+            for(int i = 0;i<rowNum;i++){
+                for(int j = 0;j<colNum;j++){
+                    if(state[i][j]==1){
+                        int up[] = new int[]{i,j};up[1]-=1;
+                        int down[] = new int[]{i,j};;down[1]+=1;
+                        int left[] =new int[]{i,j};;left[0]-=1;
+                        int right[] = new int[]{i,j};;right[0]+=1;
+                        if(up[1]>=0&&capacityMat[up[0]][up[1]]>outTouchThreshold&&capacityMat[up[0]][up[1]]<inTouchThreshold&&state[up[0]][up[1]]!=1){state[up[0]][up[1]]=1;extend = true;}
+                        if(down[1]<colNum&&capacityMat[down[0]][down[1]]>outTouchThreshold&&capacityMat[down[0]][down[1]]<inTouchThreshold&&state[down[0]][down[1]]!=1){state[down[0]][down[1]]=1;extend = true;}
+                        if(left[0]>=0&&capacityMat[left[0]][left[1]]>outTouchThreshold&&capacityMat[left[0]][left[1]]<inTouchThreshold&&state[left[0]][left[1]]!=1){state[left[0]][left[1]]=1;extend = true;}
+                        if(right[0]<rowNum&&capacityMat[right[0]][right[1]]>outTouchThreshold&&capacityMat[right[0]][right[1]]<inTouchThreshold&&state[right[0]][right[1]]!=1){state[right[0]][right[1]]=1;extend = true;}
+                    }
+                }
+            }
+        }
+
+        for(int i = 0;i<rowNum;i++){
+            for(int j = 0;j<colNum;j++){
+                if(capacityMat[i][j]<inTouchThreshold&capacityMat[i][j]>outTouchThreshold&state[i][j]!=1){
                     rects.add(new MyRect(capaPos[i][j][0],capaPos[i][j][1],capaPos[i][j][0]+pixelWidth,capaPos[i][j][1]+pixelHight,capacityMat[i][j],0));
                 }
-                else if(type == 1){
+                else if(state[i][j]==1){
                     rects.add(new MyRect(capaPos[i][j][0],capaPos[i][j][1],capaPos[i][j][0]+pixelWidth,capaPos[i][j][1]+pixelHight,capacityMat[i][j],1));
                 }
             }
         }
+
+
+
         return rects;
     }
 }

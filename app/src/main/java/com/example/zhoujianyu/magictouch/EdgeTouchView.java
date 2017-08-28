@@ -36,8 +36,9 @@ class MyRect{
 public class EdgeTouchView extends View{
     private Paint mPaint;
     public final String TAG = "myData";
-    public boolean isTouch = false;
+    public boolean isInTouch = false;
     public int touchTime = 0;
+    public boolean isOutTouch = false;
 
 
 
@@ -51,37 +52,31 @@ public class EdgeTouchView extends View{
 
 
     protected void onDraw(Canvas canvas){
-        if(isTouch == true){
-            mPaint.setColor(Color.BLACK);
-            canvas.drawRect(0, 0, getWidth(), getHeight(), mPaint);
-            for(int i = 0;i<rects.size();i++){
-                if(rects.get(i).type==0){
-                    mPaint.setColor(Color.RED);
-                    canvas.drawRect(rects.get(i).left, rects.get(i).top, rects.get(i).right, rects.get(i).bottom, mPaint);
-                    mPaint.setColor(Color.WHITE);
-                    mPaint.setTextSize(20);
-                    mPaint.setTextAlign(Paint.Align.LEFT);
-                    canvas.drawText(String.valueOf(rects.get(i).capacity),rects.get(i).left,rects.get(i).top,mPaint);
-                }
-                else if(rects.get(i).type==1){
-                    mPaint.setColor(Color.YELLOW);
-                    canvas.drawRect(rects.get(i).left, rects.get(i).top, rects.get(i).right, rects.get(i).bottom, mPaint);
-                    mPaint.setColor(Color.WHITE);
-                    mPaint.setTextSize(20);
-                    mPaint.setTextAlign(Paint.Align.LEFT);
-                    canvas.drawText(String.valueOf(rects.get(i).capacity),rects.get(i).left,rects.get(i).top,mPaint);
-                }
+        mPaint.setColor(Color.BLACK);
+        canvas.drawRect(0, 0, getWidth(), getHeight(), mPaint);
+        for(int i = 0;i<rects.size();i++){
+            if (rects.get(i).type == 1){
+                mPaint.setColor(Color.RED);
+                canvas.drawRect(rects.get(i).left, rects.get(i).top, rects.get(i).right, rects.get(i).bottom, mPaint);
+                mPaint.setColor(Color.WHITE);
+                mPaint.setTextSize(20);
+                mPaint.setTextAlign(Paint.Align.LEFT);
+                canvas.drawText(String.valueOf(rects.get(i).capacity),rects.get(i).left,rects.get(i).top,mPaint);
             }
-        }
-        else{
-            mPaint.setColor(Color.BLACK);
-            canvas.drawRect(0, 0, getWidth(), getHeight(), mPaint);
+            else if(rects.get(i).type==0){
+                mPaint.setColor(Color.YELLOW);
+                canvas.drawRect(rects.get(i).left, rects.get(i).top, rects.get(i).right, rects.get(i).bottom, mPaint);
+                mPaint.setColor(Color.WHITE);
+                mPaint.setTextSize(20);
+                mPaint.setTextAlign(Paint.Align.LEFT);
+                canvas.drawText(String.valueOf(rects.get(i).capacity),rects.get(i).left,rects.get(i).top,mPaint);
+            }
         }
         super.onDraw(canvas);
     }
 
     public void getDrawData(ArrayList<MyRect> rects){
-        this.isTouch = true;
+        isOutTouch = true;
         this.rects.clear();
         this.rects = rects;
     }
