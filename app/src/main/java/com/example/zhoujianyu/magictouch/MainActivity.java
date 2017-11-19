@@ -1,8 +1,10 @@
 package com.example.zhoujianyu.magictouch;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
@@ -15,23 +17,46 @@ import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.android.gms.maps.MapFragment;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Array;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.StringTokenizer;
-import java.util.concurrent.ExecutionException;
+import java.util.Timer;
+import java.util.TimerTask;
+
 
 public class MainActivity extends AppCompatActivity {
 
-    private TextView mTextMessage;
+    private String googleMapApiKey = "AIzaSyC9zg_ArARptXAcls0jKJxIcO5iRDurRXs";
     private EdgeTouchView touchView;
-    private final String TAG="myData";
+    private DataSender dataSender;
+    public static final String TAG="myData";
 
     public final int INTOUCH = 0;
     public final int OUTOFTOUCH = 1;
@@ -63,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
         }
         return result;
     }
+
     public void measureNoise(){
         images.clear();
         for(int i = 0;i<100;i++){
@@ -104,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    Runnable mRunnable = new Runnable(){
+    Runnable canvasRunnable = new Runnable(){
         @Override
         public void run(){
             //measureNoise();
@@ -117,7 +143,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                     touchView.getDrawData(getDrawPixel());
                     touchView.postInvalidate();
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -145,10 +170,11 @@ public class MainActivity extends AppCompatActivity {
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
             switch (item.getItemId()) {
                 case R.id.navigation_home:
-                    //mTextMessage.setText(R.string.title_home);
+//                    mTextMessage.setText(R.string.title_home);
                     return true;
                 case R.id.navigation_dashboard:
-                    //mTextMessage.setText(R.string.title_dashboard);
+                    Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+                    startActivity(intent);
                     return true;
                 case R.id.navigation_notifications:
                     //mTextMessage.setText(R.string.title_notifications);
@@ -159,15 +185,25 @@ public class MainActivity extends AppCompatActivity {
     };
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         touchView = (EdgeTouchView) findViewById(R.id.touch);
+        RequestQueue queue = Volley.newRequestQueue(this);
+        dataSender = new DataSender("http://10.0.0.67:3000/",queue);
         getScreenSize();
         calPixelSize();
         getPixelPos();
-        Thread thread = new Thread(mRunnable);
-        thread.start();
+
+        Thread canvasThread = new Thread(canvasRunnable);
+        canvasThread.start();
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                dataSender.getData(capacityMat,rowNum,colNum);
+                dataSender.sendData(Request.Method.POST);
+            }
+        },0,1000);
 
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
@@ -183,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
             int curY = 0;
             for(int j = 0;j<capaPos[i].length;j++){
                 capaPos[i][j][0] = curX;
-                capaPos[i][j][1] = curY;
+                capaPos[i][j][1] = curY-3*this.pixelHight;  //消除显示偏移
                 curY += this.pixelHight;
             }
             curX += this.pixelWidth;
@@ -289,9 +325,9 @@ public class MainActivity extends AppCompatActivity {
                 for(int j = 0;j<colNum;j++){
                     if(state[i][j]==1){
                         int up[] = new int[]{i,j};up[1]-=1;
-                        int down[] = new int[]{i,j};;down[1]+=1;
-                        int left[] =new int[]{i,j};;left[0]-=1;
-                        int right[] = new int[]{i,j};;right[0]+=1;
+                        int down[] = new int[]{i,j};down[1]+=1;
+                        int left[] =new int[]{i,j};left[0]-=1;
+                        int right[] = new int[]{i,j};right[0]+=1;
                         if(up[1]>=0&&capacityMat[up[0]][up[1]]>outTouchThreshold&&capacityMat[up[0]][up[1]]<inTouchThreshold&&state[up[0]][up[1]]!=1){state[up[0]][up[1]]=1;extend = true;}
                         if(down[1]<colNum&&capacityMat[down[0]][down[1]]>outTouchThreshold&&capacityMat[down[0]][down[1]]<inTouchThreshold&&state[down[0]][down[1]]!=1){state[down[0]][down[1]]=1;extend = true;}
                         if(left[0]>=0&&capacityMat[left[0]][left[1]]>outTouchThreshold&&capacityMat[left[0]][left[1]]<inTouchThreshold&&state[left[0]][left[1]]!=1){state[left[0]][left[1]]=1;extend = true;}
@@ -311,9 +347,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
-
-
         return rects;
     }
 }

@@ -39,10 +39,6 @@ public class EdgeTouchView extends View{
     public boolean isInTouch = false;
     public int touchTime = 0;
     public boolean isOutTouch = false;
-
-
-
-
     public ArrayList<MyRect> rects = new ArrayList<>();
 
     public EdgeTouchView(Context context, AttributeSet attrs){
