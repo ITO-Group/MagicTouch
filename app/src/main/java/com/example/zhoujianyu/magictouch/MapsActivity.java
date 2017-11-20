@@ -17,7 +17,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
     public final String TAG = MainActivity.TAG;
     private GoogleMap mMap;
-
+    private OutEventManager outEventManager = new OutEventManager();
+    public OutClickListener outClickListener;
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -48,6 +49,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        //
+        outEventManager.startDetectOutClick();
     }
 
 
@@ -69,13 +73,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
         mMap.animateCamera(CameraUpdateFactory.zoomTo(10));
+
+        outClickListener = new OutClickListener() {
+            @Override
+            public boolean onOutClick(int position) {
+                Log.d(TAG,Integer.valueOf(position).toString());
+                return true;
+            }
+        };
+
+        outEventManager.setOnOutClickListener(outClickListener);
     }
 
-    public OnOutClickListener outClickListener = new OnOutClickListener() {
-        @Override
-        public boolean onOutClick(int position) {
-            Log.d(TAG,new Integer(position).toString());
-            return true;
-        }
-    };
+
 }

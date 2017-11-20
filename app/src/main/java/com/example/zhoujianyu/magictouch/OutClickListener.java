@@ -6,6 +6,6 @@ import android.view.View;
  * Created by ZhouJianyu on 2017/11/18.
  */
 
-public interface OnOutClickListener {
+public interface OutClickListener {
     boolean onOutClick(int position);
 }

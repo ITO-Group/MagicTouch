@@ -30,7 +30,7 @@ public class OutEventManager {
     TouchStatusAnalyzer touchStatusAnalyzer = new TouchStatusAnalyzer();
     ArrayList<ArrayList<int[]>>onTouchStatus = new ArrayList<>();  //size=2, 保存当前和上一时刻的touch points
     Timer timer = new Timer();
-
+    OutClickListener outClickListener;
     public void shift(ArrayList<ArrayList<int[]>> ss, ArrayList<int[]>s){
         /**
         input:
@@ -38,8 +38,12 @@ public class OutEventManager {
             例如，当前status的outTouch点集为[{1,2},{2,3}]，表示在{1，2}和{2，3}这两个位置各有一个outTouch
             s: 当前outTouch点集
          */
-        ss.remove(0);
-        ss.add(s);
+        if(!ss.isEmpty()){
+            ss.remove(0);
+            ss.add(s);
+        }
+        Log.e(MainActivity.TAG,Integer.valueOf(ss.size()).toString());
+
     }
 
     public void initializeCapa(){
@@ -51,8 +55,10 @@ public class OutEventManager {
     }
 
     public void initializeStatus(){
-        int[] s0 = {-1,-1};
-        int[] s1 = {-1,-1};
+        ArrayList<int[]>s0 = new ArrayList<>();
+        ArrayList<int[]>s1 = new ArrayList<>();
+        onTouchStatus.add(s0);
+        onTouchStatus.add(s1);
     }
 
 //    public ArrayList<int[]> refineTouchStatus(int[][]rawTouchStatus){
@@ -121,9 +127,9 @@ public class OutEventManager {
                 public void run() {
                     try{
                         int[][] newCapa = captureCapa();
-                        ArrayList<int[]>currentStatus = new ArrayList<int[]>();
-                         = touchStatusAnalyzer.refineTouchPosition(capaData,newCapa,1,currentStatus);  //当前outTouch 点集
-                        shift(onTouchStatus,currentStatus);
+                        ArrayList<int[]>outTouchPointSet = new ArrayList<int[]>();
+                        int currentStatus = touchStatusAnalyzer.refineTouchPosition(newCapa,outTouchPointSet);  //当前outTouch 点集
+                        shift(onTouchStatus,outTouchPointSet);
                         updateCapa(newCapa);
                     }
                     catch(IOException e){
@@ -135,7 +141,6 @@ public class OutEventManager {
         return true;
     }
     private boolean detectOutSlide(){
-        
         return true;
     }
     public boolean startDetectAll(){
@@ -143,11 +148,16 @@ public class OutEventManager {
         return true;
     }
     public boolean startDetectOutClick(){
-
+        detectOutClick();
         return true;
     }
     public boolean startDetectOutSlide(){
 
         return true;
     }
+
+    public void setOnOutClickListener(OutClickListener listener){
+        this.outClickListener = listener;
+    }
+
 }
