@@ -122,7 +122,7 @@ public class OutEventManager {
                     try{
                         int[][] newCapa = captureCapa();
                         ArrayList<int[]>currentStatus = new ArrayList<int[]>();
-                         = touchStatusAnalyzer.refineTouchPosition(capaData,newCapa,1,currentStatus);  //当前outTouch 点集
+                        int currentState = touchStatusAnalyzer.refineTouchPosition(newCapa,currentStatus);  //当前outTouch 点集
                         shift(onTouchStatus,currentStatus);
                         updateCapa(newCapa);
                     }

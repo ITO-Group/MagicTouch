@@ -82,9 +82,7 @@ public class MainActivity extends AppCompatActivity {
     public int[][] getCopyCapaMat(){
         int result[][]= new int[rowNum][colNum];
         for(int i = 0;i<rowNum;i++){
-            for(int j = 0;j<colNum;j++){
-                result[i][j] = this.capacityMat[i][j];
-            }
+            System.arraycopy(this.capacityMat[i], 0, result[i], 0, this.capacityMat[i].length);
         }
         return result;
     }
@@ -123,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
             for(int j = 0;j<colNum;j++){
                 for(int k =0;k<100;k++){
                     if(noiseMax<images.get(k)[i][j]){
-                        noiseMax = images.get(k)[i][k];
+                        noiseMax = images.get(k)[i][j];
                     }
                 }
             }
