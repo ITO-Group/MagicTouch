@@ -22,16 +22,16 @@ public class OutEventManager {
     boolean detectingOutClick = false;
     boolean detectingOutSlide = false;
     boolean detectingOutPress = false;
-    public static final int rowNum = 16;
-    public static final int colNum = 28;
-    public static final int OUTTOUCH = 1;
-    public static final int INTOUCH = 0;
-    int capaData[][] = new int[rowNum][colNum];
+    int lastStatus = 0;
+    int capaData[][] = new int[Constant.ROW_NUM][Constant.COL_NUM];
+
     TouchStatusAnalyzer touchStatusAnalyzer = new TouchStatusAnalyzer();
     ArrayList<ArrayList<int[]>>onTouchStatus = new ArrayList<>();  //size=2, 保存当前和上一时刻的touch points
     Timer timer = new Timer();
     OutClickListener outClickListener;
-    public void shift(ArrayList<ArrayList<int[]>> ss, ArrayList<int[]>s){
+
+
+    public void updateStatus(ArrayList<ArrayList<int[]>> ss, ArrayList<int[]>s){
         /**
         input:
             ss: size 应为2，只保留当前和上一时刻的outTouch点的集合
@@ -97,7 +97,7 @@ public class OutEventManager {
         while ((line = bufferedreader.readLine()) != null) {
             rawData.add(line);
         }
-        int[][] curCapaData = new int[rowNum][colNum];
+        int[][] curCapaData = new int[Constant.ROW_NUM][Constant.COL_NUM];
         for(int i = 0;i<rawData.size();i++){
             StringTokenizer t = new StringTokenizer(rawData.get(i));
             int j = 0;
@@ -118,6 +118,14 @@ public class OutEventManager {
         }
     }
 
+    public int getCurrentStatusImage()throws IOException{
+        int[][] newCapa = captureCapa();
+        ArrayList<int[]>outTouchPointSet = new ArrayList<int[]>();
+        int currentStatus = touchStatusAnalyzer.refineTouchPosition(newCapa,outTouchPointSet);  //当前outTouch 点集
+        updateStatus(onTouchStatus,outTouchPointSet);
+        updateCapa(newCapa);
+        return currentStatus;
+    }
 
     private boolean detectOutClick(){
         if(!detectingOutClick){
@@ -126,21 +134,31 @@ public class OutEventManager {
                 @Override
                 public void run() {
                     try{
-                        int[][] newCapa = captureCapa();
-                        ArrayList<int[]>outTouchPointSet = new ArrayList<int[]>();
-                        int currentStatus = touchStatusAnalyzer.refineTouchPosition(newCapa,outTouchPointSet);  //当前outTouch 点集
-                        shift(onTouchStatus,outTouchPointSet);
-                        updateCapa(newCapa);
+                        int currentStatus = getCurrentStatusImage();
+                        if(lastStatus==0&&currentStatus==0){ //00
+                            //nothing
+                        }
+                        else if(lastStatus==1&&currentStatus==0){//10
+                            //
+                            lastStatus = currentStatus;
+                        }
+                        else if(lastStatus==0&&currentStatus==1){//01
+                            
+                        }
+                        else{//11
+
+                        }
                     }
                     catch(IOException e){
                         Log.e(MainActivity.TAG,"update capacity failed.");
                     }
                 }
-            },0,10);
+            },0, Constant.FLUSH_RATE);
         }
         return true;
     }
     private boolean detectOutSlide(){
+
         return true;
     }
     public boolean startDetectAll(){
