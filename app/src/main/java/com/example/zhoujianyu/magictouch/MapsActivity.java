@@ -17,8 +17,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
     public final String TAG = MainActivity.TAG;
     private GoogleMap mMap;
-    private OutEventManager outEventManager = new OutEventManager();
-    public OutClickListener outClickListener;
+    public OutEventManager outEventManager;
+//    public OutClickListener outClickListener;
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -29,7 +29,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 //                    mTextMessage.setText(R.string.title_home);
                     return true;
                 case R.id.navigation_dashboard:
-                    Log.e("myData","here0");
                     return true;
                 case R.id.navigation_notifications:
                     //mTextMessage.setText(R.string.title_notifications);
@@ -45,12 +44,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+         //Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        //outEventManager.startDetectOutClick();
+        outEventManager = new OutEventManager();
+
+        outEventManager.startDetectOutClick();
     }
 
     /**
@@ -72,14 +73,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
         mMap.animateCamera(CameraUpdateFactory.zoomTo(10));
 
-        outClickListener = new OutClickListener() {
-            @Override
-            public boolean onOutClick(int position) {
-                Log.d(TAG,Integer.valueOf(position).toString());
-                return true;
-            }
-        };
-        outEventManager.setOnOutClickListener(outClickListener);
+//        outClickListener = new OutClickListener() {
+//            @Override
+//            public boolean onOutClick(int position) {
+//                Log.d(TAG,Integer.valueOf(position).toString());
+//                return true;
+//            }
+//        };
+//        outEventManager.setOnOutClickListener(outClickListener);
     }
 
 

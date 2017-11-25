@@ -30,7 +30,6 @@ public class OutEventManager {
     Timer timer = new Timer();
     OutClickListener outClickListener;
 
-
     public void updateStatus(ArrayList<ArrayList<int[]>> ss, ArrayList<int[]>s){
         /**
         input:
@@ -42,7 +41,7 @@ public class OutEventManager {
             ss.remove(0);
             ss.add(s);
         }
-        Log.e(MainActivity.TAG,Integer.valueOf(ss.size()).toString());
+        //Log.e(MainActivity.TAG,Integer.valueOf(ss.size()).toString());
 
     }
 
@@ -61,24 +60,6 @@ public class OutEventManager {
         onTouchStatus.add(s1);
     }
 
-//    public ArrayList<int[]> refineTouchStatus(int[][]rawTouchStatus){
-//        /*
-//        intput: rawTouchStatus->当前最新 16*28 rawtouchstatus 01矩阵
-//        output: 计算过outTouch中心后的position数组
-//         */
-//        assert(rawTouchStatus.length==rowNum);
-//        ArrayList<int[]> outTouchPoints = new ArrayList<>();
-//        for(int i = 0;i<rawTouchStatus.length;i++){
-//            assert(rawTouchStatus[i].length == colNum);
-//            for(int j = 0;j<rawTouchStatus[i].length;j++){
-//                if(rawTouchStatus[i][j] == OUTTOUCH){
-//                    int[] p={i,j};
-//                    outTouchPoints.add(p);
-//                }
-//            }
-//        }
-//        return outTouchPoints;
-//    }
 
     public OutEventManager(){
         initializeCapa();
@@ -88,7 +69,6 @@ public class OutEventManager {
     public int[][] captureCapa()throws IOException{
         String line = "";
         ArrayList<String> rawData = new ArrayList<>();
-        //rawData.size = rowNum = 16
         String command[] = {"aptouch_daemon_debug", "diffdata"};
         Process process = new ProcessBuilder(new String[] {"aptouch_daemon_debug", "diffdata"}).start();
         InputStream procInputStream = process.getInputStream();
@@ -124,6 +104,7 @@ public class OutEventManager {
         int currentStatus = touchStatusAnalyzer.refineTouchPosition(newCapa,outTouchPointSet);  //当前outTouch 点集
         updateStatus(onTouchStatus,outTouchPointSet);
         updateCapa(newCapa);
+        outTouchPointSet.clear();
         return currentStatus;
     }
 
@@ -135,19 +116,21 @@ public class OutEventManager {
                 public void run() {
                     try{
                         int currentStatus = getCurrentStatusImage();
+                        //Log.e(Constant.TAG,Integer.valueOf(currentStatus).toString());
                         if(lastStatus==0&&currentStatus==0){ //00
                             //nothing
                         }
                         else if(lastStatus==1&&currentStatus==0){//10
                             //
-                            lastStatus = currentStatus;
+                            Log.e(Constant.TAG,"down");
                         }
                         else if(lastStatus==0&&currentStatus==1){//01
-                            
+                            Log.e(Constant.TAG,"up");
                         }
                         else{//11
-
+                            Log.e(Constant.TAG,"maintain");
                         }
+                        lastStatus = currentStatus;
                     }
                     catch(IOException e){
                         Log.e(MainActivity.TAG,"update capacity failed.");

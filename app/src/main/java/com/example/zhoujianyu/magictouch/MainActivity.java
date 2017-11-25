@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private String googleMapApiKey = "AIzaSyC9zg_ArARptXAcls0jKJxIcO5iRDurRXs";
     private EdgeTouchView touchView;
     private DataSender dataSender;
-    public static final String TAG="myData";
+    public static final String TAG=Constant.TAG;
 
     public final int INTOUCH = 0;
     public final int OUTOFTOUCH = 1;

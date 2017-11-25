@@ -9,17 +9,19 @@ import java.util.Arrays;
  */
 
 public class TouchStatusAnalyzer {
-    private static final int rowNum = 16;
-    private static final int colNum = 28;
-    private static final int inTouchThreshold = 1200;
-    private static final int outTouchThreshold = 200;
+    private static final int rowNum = Constant.ROW_NUM;
+    private static final int colNum = Constant.COL_NUM;
+    private static final int inTouchThreshold = Constant.IN_TOUCH_THRESHOLD;
+    private static final int outTouchThreshold = Constant.OUT_TOUCH_THRESHOLD;
     private int capacityHistoryData[][] = new int[rowNum][colNum];
     private int touchPoint[][] = new int[rowNum][colNum];
     private int checkPoint[][] = new int[rowNum][colNum];
     private int floodMove[][] = {{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,-1}};
 
     public TouchStatusAnalyzer() {
-        Arrays.fill(touchPoint, -1);
+        for(int i = 0;i<rowNum;i++){
+            Arrays.fill(touchPoint[i],-1);
+        }
     }
 
     private int[][] getCopyCapacityMat(int a[][]){
@@ -57,14 +59,13 @@ public class TouchStatusAnalyzer {
                 for (int k = 0; k < floodMove.length; k++) {
                     int x = i + floodMove[k][0];
                     int y = j + floodMove[k][1];
-                    if (x >= 0 || x < rowNum || y >= 0 || y < colNum) {
+                    if ((x >= 0 && x < rowNum) && (y >= 0 && y < colNum)) {
                         if (a[i][j] < a[x][y]) {
                             top = false;
                             break;
                         }
                     }
                 }
-
                 if (top) {
                     touchPoint[i][j] = checkType(a, i, j);
                 }
@@ -80,10 +81,10 @@ public class TouchStatusAnalyzer {
                 if (touchPoint[i][j] == -1) {
                     continue;
                 }
-                if (checkPoint[i][j] == 0) {
+                else if (checkPoint[i][j] == 0) {
                     hasZero = true;
                 }
-                if (checkPoint[i][j] == 1) {
+                else if (checkPoint[i][j] == 1) {
                     hasOne = true;
                 }
                 /*
@@ -105,7 +106,8 @@ public class TouchStatusAnalyzer {
                 */
                 if (touchPoint[i][j] == 1 && hasZero) {
                     touchPoint[i][j] = 0;
-                } else if (touchPoint[i][j] == 0 && hasOne) {
+                }
+                else if (touchPoint[i][j] == 0 && hasOne) {
                     touchPoint[i][j] = 1;
                 }
                 if (touchPoint[i][j] == 0) {

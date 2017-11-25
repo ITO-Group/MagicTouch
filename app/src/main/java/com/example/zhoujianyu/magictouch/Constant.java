@@ -10,7 +10,7 @@ public interface Constant {
     String TAG = "myData";
 
     //时间
-    int FLUSH_RATE = 10;
+    int FLUSH_RATE = 100;
     int CLICK_INTERVAL = 50;
 
     //电容相关
