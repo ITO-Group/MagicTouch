@@ -1,5 +1,7 @@
 package com.example.zhoujianyu.magictouch;
 
+import android.util.Log;
+
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,11 +18,11 @@ public class TouchStatusAnalyzer {
     private int capacityHistoryData[][] = new int[rowNum][colNum];
     private int touchPoint[][] = new int[rowNum][colNum];
     private int checkPoint[][] = new int[rowNum][colNum];
-    private int floodMove[][] = {{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,-1}};
+    private int floodMove[][] = {{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}};
 
     public TouchStatusAnalyzer() {
         for(int i = 0;i<rowNum;i++){
-            Arrays.fill(touchPoint[i],-1);
+            Arrays.fill(touchPoint[i],0);
         }
     }
 
@@ -43,17 +45,19 @@ public class TouchStatusAnalyzer {
 
     private int checkType(int a[][], int i, int j) {
         if (a[i][j] > inTouchThreshold)
-            return 1;
+            return 2;
         if (a[i][j] < outTouchThreshold)
-            return -1;
-        return 0;
+            return 0;
+        return 1;
     }
 
     private void checkCapacityData(int a[][]) {
+        //检测出所有touch中心点
         for (int i = 0; i < rowNum; i++) {
             for (int j = 0; j < colNum; j++) {
                 boolean top = true;
-                if (checkType(a, i, j) == -1) {
+                if (checkType(a, i, j) == 0) {
+                    touchPoint[i][j] = 0;//filt掉所有噪声
                     continue;
                 }
                 for (int k = 0; k < floodMove.length; k++) {
@@ -62,77 +66,60 @@ public class TouchStatusAnalyzer {
                     if ((x >= 0 && x < rowNum) && (y >= 0 && y < colNum)) {
                         if (a[i][j] < a[x][y]) {
                             top = false;
+                            touchPoint[i][j]=0; //filt掉所有非peak point
                             break;
                         }
                     }
                 }
                 if (top) {
-                    touchPoint[i][j] = checkType(a, i, j);
+                    touchPoint[i][j] = checkType(a, i, j);//peak point 只有两种：黄-》1，红-》2,噪声是0
+                    if(touchPoint[i][j]==1){
+                    }
                 }
             }
         }
     }
 
-    private void generateList(ArrayList<int[]>outTouchPointSet) {
+    private void generateList(int[][]currentCapaData) {
         for (int i = 0; i < rowNum; i++) {
             for (int j = 0; j < colNum; j++) {
-                boolean hasZero = false;
-                boolean hasOne = false;
-                if (touchPoint[i][j] == -1) {
+                boolean yellowed = false;
+                boolean reded = false;
+                if (touchPoint[i][j] == 0) {
                     continue;
                 }
-                else if (checkPoint[i][j] == 0) {
-                    hasZero = true;
-                }
                 else if (checkPoint[i][j] == 1) {
-                    hasOne = true;
+                    yellowed = true;
                 }
-                /*
-                for (int x = i-1; x <= i+1; x++) {
-                    if (x < 0 || x >= rowNum) {
-                        continue;
-                    }
-                    for (int y = j-1; y <= j+1; y++) {
-                        if (y >= 0 || y < colNum) {
-                            if (checkPoint[x][y] == 0) {
-                                hasZero = true;
-                            }
-                            if (checkPoint[x][y] == 1) {
-                                hasOne = true;
-                            }
-                        }
-                    }
+                else if (checkPoint[i][j] == 2) {
+                    reded = true;
                 }
-                */
-                if (touchPoint[i][j] == 1 && hasZero) {
-                    touchPoint[i][j] = 0;
+                if (touchPoint[i][j] == 2 && yellowed) {
+
+                    touchPoint[i][j] = 1;//上一刻是黄，无论再怎么按压都是黄
                 }
-                else if (touchPoint[i][j] == 0 && hasOne) {
-                    touchPoint[i][j] = 1;
-                }
-                if (touchPoint[i][j] == 0) {
-                    outTouchPointSet.add(new int[]{i,j});
+                else if (touchPoint[i][j] == 1 && reded) {
+                   // Log.e("outclick","got it!!!!!!!!!!!!!");
+
+                    touchPoint[i][j] = 2;//上一刻是红，再轻都是红
                 }
             }
         }
     }
 
-    public int refineTouchPosition(int[][] capacityData,ArrayList<int[]>outTouchPointSet){
+    public int[][] refineTouchPosition(int[][] capacityData){
         /**
          * input: CapacityData->当前时刻获取的电容image(16*28)
          * output:
-         * outTouchPointSet: out-touch点集，其中每个点代表一个out of touch的中心,每一个点用一个size=2的数组表示，int[0]=rowId,int[1]=colId
-         *                  传的是一个引用的空List，需要将结果写进去
          * int currentStatus: 0->无out-of-touch,1->out-of-touch
          */
         if (identicalMat(capacityData)) {
-            return 0;
+            return this.touchPoint;
         }
-        this.checkPoint = getCopyCapacityMat(this.touchPoint);
-        checkCapacityData(capacityData);
-        generateList(outTouchPointSet);
-        this.capacityHistoryData = getCopyCapacityMat(capacityData);
-        return (outTouchPointSet.size() > 0) ? 1 : 0;
+        this.checkPoint = getCopyCapacityMat(this.touchPoint); //获取上一次touchPoint状态的copy
+        checkCapacityData(capacityData);//初步更新touchPoint, 给所有找到所有touch中心点
+        generateList(capacityData);//此时touchPoint已更完
+        this.capacityHistoryData = getCopyCapacityMat(capacityData);//用来下次调用与新的capacity做比较看是否完全相同
+        return this.touchPoint;
     }
-
 }

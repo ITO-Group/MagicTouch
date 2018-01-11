@@ -1,5 +1,6 @@
 package com.example.zhoujianyu.magictouch;
 
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.FragmentActivity;
@@ -16,8 +17,9 @@ import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
     public final String TAG = MainActivity.TAG;
-    private GoogleMap mMap;
+    public static GoogleMap mMap;
     public OutEventManager outEventManager;
+    public Handler handler = new Handler();
 //    public OutClickListener outClickListener;
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -49,9 +51,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        outEventManager = new OutEventManager();
-
-        outEventManager.startDetectOutClick();
     }
 
     /**
@@ -73,14 +72,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
         mMap.animateCamera(CameraUpdateFactory.zoomTo(10));
 
-//        outClickListener = new OutClickListener() {
+        outEventManager = new OutEventManager(mMap);
+//        OutEventManager.OutClickListener outClickListener = new OutEventManager.OutClickListener() {
 //            @Override
-//            public boolean onOutClick(int position) {
-//                Log.d(TAG,Integer.valueOf(position).toString());
+//            public boolean onOutClick(int[] position) {
+//                map.animateCamera(CameraUpdateFactory.zoomTo(5));
+//                Log.e("outclick","finish zoom");
 //                return true;
 //            }
 //        };
-//        outEventManager.setOnOutClickListener(outClickListener);
+        outEventManager.startDetectOutClick(handler);
     }
 
 

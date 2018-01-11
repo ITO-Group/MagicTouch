@@ -43,6 +43,7 @@ import java.net.URI;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,15 +52,14 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 
+
 public class MainActivity extends AppCompatActivity {
 
     //private String googleMapApiKey = "AIzaSyC9zg_ArARptXAcls0jKJxIcO5iRDurRXs";
     private EdgeTouchView touchView;
     private DataSender dataSender;
-    public static final String TAG=Constant.TAG;
-
-    public final int INTOUCH = 0;
-    public final int OUTOFTOUCH = 1;
+    private OutEventManager outEventManager;
+    public static final String TAG = Constant.TAG;
 
     public int screenWidth = 0;
     public int screenHeight = 0;
@@ -67,17 +67,18 @@ public class MainActivity extends AppCompatActivity {
     public int pixelWidth = 0;
     public int pixelHight = 0;
 
-    public final int rowNum = 16;
-    public final int colNum = 28;
+    public final int rowNum = Constant.ROW_NUM;
+    public final int colNum = Constant.COL_NUM;
     public int capacityMat[][] = new int[rowNum][colNum];
     public int capaPos[][][] = new int[rowNum][colNum][2];
     public ArrayList<int[][]> images = new ArrayList<>();
     public final int imageSize = 1;
     public double noiseGradient[][] = new double[rowNum][colNum];
-    public long flushRate = 100;
+    public int flushRate = Constant.FLUSH_RATE;
     public int noiseMax = 0;
-    public final int inTouchThreshold = 1200;
-    public final int outTouchThreshold = 200;
+    public final int inTouchThreshold = Constant.IN_TOUCH_THRESHOLD;
+    public final int outTouchThreshold = Constant.OUT_TOUCH_THRESHOLD;
+    public final int postRate = Constant.POST_RATE;
 
     public int[][] getCopyCapaMat(){
         int result[][]= new int[rowNum][colNum];
@@ -87,69 +88,22 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    public void measureNoise(){
-        images.clear();
-        for(int i = 0;i<100;i++){
-            try {
-                refresh();
-                images.add(getCopyCapaMat());
-                int a = 1;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        //method 1:根据image之间的差值
-//        int gmax = 0;
-//        for(int i = 0;i<rowNum;i++){
-//            for(int j = 0;j<colNum;j++){
-//                int max = 0;
-//                for(int k = 1;k<100;k++){
-//                    int delta = Math.abs(images.get(k)[i][j]-images.get(k-1)[i][j]);
-//                    if(delta>max){max = delta;}
-//                    if(max>gmax){gmax = max;}
-//                }
-//                noiseGradient[i][j] = max;
-//            }
-//        }
-        //method2 : 根据峰值
-        for(int i = 0;i<rowNum;i++){
-            for(int j = 0;j<colNum;j++){
-                for(int k =0;k<100;k++){
-                    if(noiseMax<images.get(k)[i][j]){
-                        noiseMax = images.get(k)[i][j];
-                    }
-                }
-            }
-        }
-    }
-
     Runnable canvasRunnable = new Runnable(){
         @Override
         public void run(){
-            //measureNoise();
             while(true){
                 try {
-                    images.clear();
-                    for(int i = 0;i<imageSize;i++){
-                        refresh();
-                        images.add(getCopyCapaMat());
-                    }
-                    touchView.getDrawData(getDrawPixel());
+                    ArrayList<MyRect> rects = new ArrayList<>();
+                    outEventManager.test(rects);
+                    outEventManager.test(rects);
+                    touchView.getDrawData(rects);
                     touchView.postInvalidate();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
             }
         }
     };
-
-
 
     private View.OnTouchListener touchListener = new View.OnTouchListener() {
         @Override
@@ -187,11 +141,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         touchView = (EdgeTouchView) findViewById(R.id.touch);
+        outEventManager = new OutEventManager();
         RequestQueue queue = Volley.newRequestQueue(this);
         dataSender = new DataSender("http://10.0.0.67:3000/",queue);
         getScreenSize();
         calPixelSize();
         getPixelPos();
+        Constant.CAPA_POS = capaPos;
 
         Thread canvasThread = new Thread(canvasRunnable);
         canvasThread.start();
@@ -201,7 +157,8 @@ public class MainActivity extends AppCompatActivity {
                 dataSender.getData(capacityMat,rowNum,colNum);
                 dataSender.sendData(Request.Method.POST);
             }
-        },0,1000);
+        },0,postRate);
+
 
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
@@ -209,6 +166,8 @@ public class MainActivity extends AppCompatActivity {
     public void calPixelSize(){
         this.pixelWidth = (int)(this.screenWidth/this.rowNum);
         this.pixelHight = (int)(this.screenHeight/this.colNum);
+        Constant.PIXEL_WIDTH = this.pixelWidth;
+        Constant.PIXEL_HEIGHT = this.pixelHight;
     }
 
     public void getPixelPos(){
@@ -231,6 +190,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void refresh()throws Exception{
+        /**
+         * description：获得原始String 类型的电容信号，并将其转化为int矩阵
+         */
         ArrayList<String> rawData = getRawCapacityData();
         for(int i = 0;i<rawData.size();i++){
             StringTokenizer t = new StringTokenizer(rawData.get(i));
@@ -255,57 +217,12 @@ public class MainActivity extends AppCompatActivity {
         return rawData;
     }
 
-
-    public int getTouchType1(int s[],int x,int y){
-        //method 1:根据差值
-            int maxDelta = 0;
-            for(int i = 1;i<s.length;i++){
-                int delta = Math.abs(s[i]-s[i-1]);
-                if(delta>maxDelta){
-                    maxDelta = delta;
-                }
-            }
-            if(maxDelta>=10*noiseGradient[x][y]){
-                Log.e(TAG,"in touch!!!");
-                return 0;//intouch
-            }
-            else if(maxDelta > 5*noiseGradient[x][y]){
-                Log.e(TAG,"out of touch!!!");
-                return 1;//outoftouch
-            }
-        return -1;  //no touch
-    }
-
-    public boolean canExtend(ArrayList<int[]>list,int state[][]){
-        for(int i = 0;i<list.size();i++){
-            int[] node = list.get(i);
-            int x = node[0];int y = node[1];
-            if(x-1>0){if(state[x-1][y]==0){return true;}}
-            if(x+1<rowNum){if(state[x+1][y]==0){return true;}}
-            if(y-1>0){if(state[x][y-1]==0){return true;}}
-            if(y+1<colNum){if(state[x][y+1]==0){return true;}}
-        }
-        return false;
-    }
-
     public ArrayList<MyRect> getDrawPixel(){
+        /**
+         * input: 类成员变量capacityMat
+         * output: 一个list,包含所有需要绘的点和每个点的类型（outTouch/inTouch）
+         */
         ArrayList<MyRect> rects = new ArrayList<>();
-        //根据跳变
-//        for(int i = 0;i<this.rowNum;i++){
-//            for(int j = 0;j<this.colNum;j++){
-//                int sequence[] = new int[this.imageSize];
-//                for(int k = 0;k<this.imageSize;k++){
-//                   sequence[k] = images.get(k)[i][j];
-//                }
-//                int type = getTouchType(sequence,i,j);
-//                if(type == 0){
-//                    rects.add(new MyRect(capaPos[i][j][0],capaPos[i][j][1],capaPos[i][j][0]+pixelWidth,capaPos[i][j][1]+pixelHight,capacityMat[i][j],0));
-//                }
-//                else if(type == 1){
-//                    rects.add(new MyRect(capaPos[i][j][0],capaPos[i][j][1],capaPos[i][j][0]+pixelWidth,capaPos[i][j][1]+pixelHight,capacityMat[i][j],1));
-//                }
-//            }
-//        }
         //根据峰值
         int[][]state = new int[rowNum][colNum];
         for(int i = 0;i<this.rowNum;i++){

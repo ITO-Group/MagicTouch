@@ -31,6 +31,11 @@ class MyRect{
         this.left = l;this.right = r;this.bottom = b;this.top = t;this.type = type;
         this.capacity = c;
     }
+    @Override
+    protected MyRect clone(){
+        MyRect r = new MyRect(this.left,this.top,this.right,this.bottom,this.capacity,this.type);
+        return r;
+    }
 }
 
 public class EdgeTouchView extends View{
@@ -40,6 +45,12 @@ public class EdgeTouchView extends View{
     public int touchTime = 0;
     public boolean isOutTouch = false;
     public ArrayList<MyRect> rects = new ArrayList<>();
+    public ArrayList<MyRect> lastRects = new ArrayList<>();
+    public void deepClone(){
+        for(int i = 0;i<rects.size();i++){
+            lastRects.add(rects.get(i).clone());
+        }
+    }
 
     public EdgeTouchView(Context context, AttributeSet attrs){
         super(context,attrs);
@@ -68,12 +79,14 @@ public class EdgeTouchView extends View{
                 canvas.drawText(String.valueOf(rects.get(i).capacity),rects.get(i).left,rects.get(i).top,mPaint);
             }
         }
+        deepClone();
         super.onDraw(canvas);
     }
 
     public void getDrawData(ArrayList<MyRect> rects){
         isOutTouch = true;
         this.rects.clear();
+
         this.rects = rects;
     }
 
