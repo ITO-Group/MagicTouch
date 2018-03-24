@@ -57,23 +57,29 @@ public class DataSender {
         if(this.data==null){
             this.data = new HashMap<String,String>();
         }
-
-        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-        Date date = new Date(System.currentTimeMillis());
-        String ct = formatter.format(date);
+//        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
+//        Date date = new Date(System.currentTimeMillis());
+//        String ct = formatter.format(date);
         String capa = TextUtils.join(",",list);
-        this.data.put("time",ct);
+        this.data.put("pos","0");
         this.data.put("data",capa);
     }
-    public void sendData(int method){
-        StringRequest request = new StringRequest(method,this.url,listener,errorListener){
+
+    public void sendData(int method,final String suffix){
+        StringRequest request = new StringRequest(method,this.url+suffix,listener,errorListener){
             @Override
             protected Map<String, String> getParams() throws AuthFailureError {
-                return data;
+                if(suffix.equals("")){
+                    return data;
+                }
+                else{
+                    HashMap done = new HashMap<String,String>();
+                    done.put("done","0");
+                    return done;
+                }
             }
         };
         request.setRetryPolicy(new DefaultRetryPolicy(1000, 0, 1.0f));
         queue.add(request);
-
     }
 }

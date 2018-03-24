@@ -15,6 +15,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.android.volley.AuthFailureError;
@@ -59,6 +60,8 @@ public class MainActivity extends AppCompatActivity {
     private EdgeTouchView touchView;
     private DataSender dataSender;
     private OutEventManager outEventManager;
+    private Button collectButton;
+    private View.OnClickListener collectButtonClickListener;
     public static final String TAG = Constant.TAG;
 
     public int screenWidth = 0;
@@ -95,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     ArrayList<MyRect> rects = new ArrayList<>();
                     outEventManager.test(rects);
-                    outEventManager.test(rects);
                     touchView.getDrawData(rects);
                     touchView.postInvalidate();
                 } catch (Exception e) {
@@ -117,7 +119,6 @@ public class MainActivity extends AppCompatActivity {
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
-
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
             switch (item.getItemId()) {
@@ -125,11 +126,14 @@ public class MainActivity extends AppCompatActivity {
 //                    mTextMessage.setText(R.string.title_home);
                     return true;
                 case R.id.navigation_dashboard:
+                    //启动mapsactivity
                     Intent intent = new Intent(MainActivity.this, MapsActivity.class);
                     startActivity(intent);
                     return true;
                 case R.id.navigation_notifications:
                     //mTextMessage.setText(R.string.title_notifications);
+                    Intent intent2 = new Intent(MainActivity.this,BlackboardActivity.class);
+                    startActivity(intent2);
                     return true;
             }
             return false;
@@ -141,27 +145,68 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         touchView = (EdgeTouchView) findViewById(R.id.touch);
+        collectButton = (Button) findViewById(R.id.collect_button);
         outEventManager = new OutEventManager();
         RequestQueue queue = Volley.newRequestQueue(this);
-        dataSender = new DataSender("http://10.0.0.67:3000/",queue);
+        dataSender = new DataSender("http://173.250.139.42:3000/",queue);
         getScreenSize();
         calPixelSize();
         getPixelPos();
         Constant.CAPA_POS = capaPos;
 
-        Thread canvasThread = new Thread(canvasRunnable);
-        canvasThread.start();
-        new Timer().scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                dataSender.getData(capacityMat,rowNum,colNum);
-                dataSender.sendData(Request.Method.POST);
-            }
-        },0,postRate);
+        Thread canvasThread = new Thread(canvasRunnable); //
+        //canvasThread.start();
+//        new Timer().scheduleAtFixedRate(new TimerTask() {
+//            @Override
+//            public void run() {
+//                dataSender.getData(capacityMat,rowNum,colNum);
+//                dataSender.sendData(Request.Method.POST);
+//            }
+//        },0,postRate);
 
-
+        //set up listener
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener); //navigation bar listener
+        collectButtonClickListener = new View.OnClickListener() {
+            boolean execute = true;
+            Runnable runnable = new Runnable() {
+                @Override
+                public void run() {
+                    while(execute){
+                        try{
+                            int[][] rawdata = outEventManager.captureCapa();
+                            dataSender.getData(rawdata,rowNum,colNum);
+                            dataSender.sendData(Request.Method.POST,"");
+                        }
+                        catch(Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            };
+            Thread dataCollectThread = new Thread(runnable);
+            @Override
+            public void onClick(View v) {
+                Button btn = (Button) v;
+                Log.e("googleMap",btn.getText().toString());
+                if(btn.getText().toString().equals("Start Collecting Data")){
+                    btn.setText("collecting");
+                    //launch data collector and data sender
+                    execute = true;
+                    dataCollectThread.start();
+                }
+                else{
+                    btn.setText("Start Collecting Data");
+                    dataSender.sendData(Request.Method.POST,"stop");
+                    // end data collector and data sender
+                    execute = false;
+                }
+
+            }
+        };
+        collectButton.setOnClickListener(collectButtonClickListener);
+
+
     }
     public void calPixelSize(){
         this.pixelWidth = (int)(this.screenWidth/this.rowNum);
@@ -176,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
             int curY = 0;
             for(int j = 0;j<capaPos[i].length;j++){
                 capaPos[i][j][0] = curX;
-                capaPos[i][j][1] = curY-3*this.pixelHight;  //消除显示偏移
+                capaPos[i][j][1] = curY+1*this.pixelHight;  //消除显示偏移
                 curY += this.pixelHight;
             }
             curX += this.pixelWidth;

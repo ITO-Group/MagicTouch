@@ -30,10 +30,18 @@ public class OutEventManager {
     boolean detectingOutPress = false;
     long lastTime = Calendar.getInstance().getTimeInMillis();
     long currentTime = Calendar.getInstance().getTimeInMillis();
+    int curX = 0;int curY = 0;
+    int lastX = 0;int lastY = 0;
 
     int[][] newCapa;
     int hisTouchStatus[][] = new int[Constant.ROW_NUM][Constant.COL_NUM];
     long [][]timeMatrix = new long[Constant.ROW_NUM][Constant.COL_NUM];  //记录每个cell黄色持续的时间
+
+
+    float zoomLevel = 10;
+    int outSlideLastX = 0;
+    int outSlideLastY = 0;
+
 
     ArrayList<int[]>outTouchPointSet = new ArrayList<int[]>();
 
@@ -46,23 +54,6 @@ public class OutEventManager {
     public interface OutClickListener{
         boolean onOutClick(GoogleMap map,int[]position);
     }
-
-//    public void updateStatus(ArrayList<ArrayList<int[]>> ss, ArrayList<int[]>s){
-//        /**
-//        input:
-//            ss: size 应为2，只保留当前和上一时刻的outTouch点的集合
-//            例如，当前status的outTouch点集为[{1,2},{2,3}]，表示在{1，2}和{2，3}这两个位置各有一个outTouch
-//            s: 当前outTouch点集
-//         */
-//        if(!ss.isEmpty()){
-//            ss.remove(0);
-//            ArrayList<int[]> cs = new ArrayList<>();
-//            cs = (ArrayList<int[]>)s.clone();
-//            ss.add(cs);
-//        }
-//        //Log.e(MainActivity.TAG,Integer.valueOf(ss.size()).toString());
-//
-//    }
 
     public void initializeTouchStatus(){
         for(int i = 0;i<hisTouchStatus.length;i++){
@@ -88,15 +79,6 @@ public class OutEventManager {
         }
     }
 
-    public OutEventManager(GoogleMap map){
-        initializeTouchStatus();
-        initializeStatus();
-        //初始化time矩阵
-        for(int i = 0;i<Constant.ROW_NUM;i++){
-            Arrays.fill(timeMatrix[i],0);
-        }
-        this.map = map;
-    }
 
     public long getInterval(){
         lastTime = currentTime;
@@ -105,6 +87,9 @@ public class OutEventManager {
     }
 
     public int[][] captureCapa()throws IOException{
+        /***
+            return a matrix that contains raw capacity sensing data
+         ***/
         String line = "";
         ArrayList<String> rawData = new ArrayList<>();
         String command[] = {"aptouch_daemon_debug", "diffdata"};
@@ -180,7 +165,6 @@ public class OutEventManager {
                 try{
                     int currentPoint[][] = getCurrentStatusImage();
                     long interval = getInterval();
-                    //Log.e("outclick",Long.valueOf(interval).toString());
                     /*
                     更新timer矩阵
                      */
@@ -194,17 +178,14 @@ public class OutEventManager {
                                 //只检测下降沿
                                 if(hisTouchStatus[i][j]==1){
                                     if(timeMatrix[i][j]<=Constant.CLICK_INTERVAL){
-                                        //Log.e("outclick","detected!!");
-                                        Log.e("outclick","start zoom");
-                                        //map.animateCamera(CameraUpdateFactory.zoomTo(5));
                                         Runnable runnable = new Runnable() {
                                             @Override
                                             public void run() {
-                                                MapsActivity.mMap.animateCamera(CameraUpdateFactory.zoomTo(5));
+//                                                MapsActivity.mMap.animateCamera(CameraUpdateFactory.zoomTo(zoomLevel));
+//                                                zoomLevel+=0.1;
                                             }
                                         };
                                         handler.post(runnable);
-                                        Log.e("outclick","finish zoom");
                                     }
                                 }
                             }
@@ -220,15 +201,63 @@ public class OutEventManager {
 
         return true;
     }
-    public boolean startDetectOutSlide(){
-        detectOutSlide();
+    public boolean startDetectOutSlide(final Handler handler){
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                try{
+                    int currentPoint[][] = getCurrentStatusImage();
+                    long interval = getInterval();
+                    final int times = 0;
+                    /*
+                    更新timer矩阵
+                     */
+                    for(int i = 0;i<Constant.ROW_NUM;i++){
+                        for(int j = 0;j<Constant.COL_NUM;j++){
+                            if(hisTouchStatus[i][j]==currentPoint[i][j]){
+                                timeMatrix[i][j]+=interval;
+                            }
+                            else{
+                                timeMatrix[i][j] = interval;
+                                //只检测下降沿
+                                if(hisTouchStatus[i][j]==1){
+                                    if(timeMatrix[i][j]<=Constant.CLICK_INTERVAL){
+                                        curX = i;curY = j;
+                                        Runnable runnable = new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                if(curX==lastX){
+                                                    if(curY>lastY){
+                                                        zoomLevel+=0.1;
+                                                    }
+                                                    else if(curY<lastY){
+                                                        zoomLevel-=0.1;
+                                                    }
+                                                }
+                                                MapsActivity.mMap.animateCamera(CameraUpdateFactory.zoomTo(zoomLevel));
+                                                lastX = curX;lastY = curY;
+                                            }
+                                        };
+                                        handler.post(runnable);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    updateTouchStatus(currentPoint);
+                }
+                catch(IOException e){
+                    Log.e(MainActivity.TAG,"update capacity failed.");
+                }
+            }
+        },0, Constant.FLUSH_RATE);
         return true;
     }
 
 
     public void test(ArrayList<MyRect> rects){
         try {
-            int status[][] = getCurrentStatusImage();
+            int status[][] = getCurrentStatusImage();   //获取当前时刻capacity status
             outTouchPointSet.clear();
             for(int i = 0;i<Constant.ROW_NUM;i++){
                 for(int j = 0;j<Constant.COL_NUM;j++){
@@ -237,7 +266,6 @@ public class OutEventManager {
                     }
                 }
             }
-            //Log.e("outclick",Integer.valueOf(outTouchPointSet.size()).toString());
             for(int i = 0;i<outTouchPointSet.size();i++){
                 int rowId = outTouchPointSet.get(i)[0];
                 int colId = outTouchPointSet.get(i)[1];
@@ -248,30 +276,9 @@ public class OutEventManager {
                 int dy = Constant.PIXEL_HEIGHT;
                 rects.add(new MyRect(x,y,x+dx,y+dy,value,0));
             }
-//            Log.e("outclick",Integer.valueOf(rects.size()).toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
-//    public void test2(ArrayList<MyRect> rects){
-//        try{
-//            int a = getCurrentStatusImage();
-//            for(int i = 0;i<Constant.ROW_NUM;i++){
-//                for(int j = 0;j<Constant.COL_NUM;j++){
-//                    int x = Constant.CAPA_POS[i][j][0];
-//                    int y = Constant.CAPA_POS[i][j][1];
-//                    int dx = Constant.PIXEL_WIDTH;
-//                    int dy = Constant.PIXEL_HEIGHT;
-//                    int value = capaData[i][j];
-//                    rects.add(new MyRect(x,y,x+dx,y+dy,value,1));
-//                }
-//            }
-//        }
-//        catch(Exception e){
-//            String message = e.getMessage();
-//            Log.e(Constant.TAG,"pause.....");
-//        }
-//    }
 }
 
