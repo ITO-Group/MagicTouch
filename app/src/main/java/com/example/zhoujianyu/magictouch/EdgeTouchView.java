@@ -92,11 +92,12 @@ public class EdgeTouchView extends View{
             public void run() {
                 while(listening){
                     try {
-                        rawCapacityData = captureCapa();
+//                        rawCapacityData = captureCapa();
+                         int[][] imageStatus = getCurrentStatusImage();
                         // 对于blackboard,直接高亮point
                         // 数据准备
                         rects.clear();
-                        getDrawingPixel(rawCapacityData);
+                        getDrawingPixel(imageStatus);
                         EdgeTouchView.this.postInvalidate();
                         // 检测是否有outclick
                         // 检测是否有outslide
@@ -113,13 +114,16 @@ public class EdgeTouchView extends View{
     public void getDrawingPixel(int[][]status){
         for(int i = 0;i<Constant.ROW_NUM;i++){
             for(int j = 0;j<Constant.COL_NUM;j++){
-                if(status[i][j]>Constant.OUT_TOUCH_THRESHOLD){
+                if(status[i][j]>0){
                     int x = Constant.CAPA_POS[i][j][0];
                     int y = Constant.CAPA_POS[i][j][1];
                     int capa = rawCapacityData[i][j];
                     int dx = Constant.PIXEL_WIDTH;
                     int dy = Constant.PIXEL_HEIGHT;
-                    rects.add(new MyRect(x,y,x+dx,y+dy,capa,0));
+                    int type = 0;
+                    if(status[i][j]==1)type = 0;
+                    else type=1;
+                    rects.add(new MyRect(x,y,x+dx,y+dy,capa,type));
                 }
             }
         }

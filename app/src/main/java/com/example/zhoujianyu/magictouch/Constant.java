@@ -19,7 +19,8 @@ public class Constant {
     public static final int COL_NUM = 28;  //capa image col size
 
     public static final int OUT_TOUCH_THRESHOLD = 200;
-    public static final int IN_TOUCH_THRESHOLD = 1200;
+    public static final int OUT_TOUCH_MAXIMUM = 1400;
+    public static final int IN_TOUCH_THRESHOLD = 1600;
 
     public static int PIXEL_WIDTH;
     public static int PIXEL_HEIGHT;
@@ -29,5 +30,9 @@ public class Constant {
     public static final int IN_TOUCH = 0;
     public static final int OUT_TOUCH = 1;
 
+    int NO_TOUCH = 0;
+    int TOUCH_OUT = 1;
+    int TOUCH_ON = 2;
+    public enum TOUCH_TYPE{NO_TOUCH,TOUCH_OUT,TOUCH_ON}
 
 }
