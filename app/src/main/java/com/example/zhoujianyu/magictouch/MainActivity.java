@@ -83,39 +83,7 @@ public class MainActivity extends AppCompatActivity {
     public final int outTouchThreshold = Constant.OUT_TOUCH_THRESHOLD;
     public final int postRate = Constant.POST_RATE;
 
-    public int[][] getCopyCapaMat(){
-        int result[][]= new int[rowNum][colNum];
-        for(int i = 0;i<rowNum;i++){
-            System.arraycopy(this.capacityMat[i], 0, result[i], 0, this.capacityMat[i].length);
-        }
-        return result;
-    }
 
-    Runnable canvasRunnable = new Runnable(){
-        @Override
-        public void run(){
-            while(true){
-                try {
-                    ArrayList<MyRect> rects = new ArrayList<>();
-                    outEventManager.test(rects);
-                    touchView.getDrawData(rects);
-                    touchView.postInvalidate();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    };
-
-    private View.OnTouchListener touchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            EdgeTouchView ev = (EdgeTouchView)view;
-            ev.isInTouch = true;
-            ev.postInvalidate();
-            return true;
-        }
-    };
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -125,11 +93,11 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.navigation_home:
 //                    mTextMessage.setText(R.string.title_home);
                     return true;
-                case R.id.navigation_dashboard:
-                    //启动mapsactivity
-                    Intent intent = new Intent(MainActivity.this, MapsActivity.class);
-                    startActivity(intent);
-                    return true;
+//                case R.id.navigation_dashboard:
+//                    //启动mapsactivity
+//                    Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+//                    startActivity(intent);
+//                    return true;
                 case R.id.navigation_notifications:
                     //mTextMessage.setText(R.string.title_notifications);
                     Intent intent2 = new Intent(MainActivity.this,BlackboardActivity.class);
@@ -145,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         touchView = (EdgeTouchView) findViewById(R.id.touch);
+//        touchView.enableDrawPixel();
         collectButton = (Button) findViewById(R.id.collect_button);
         outEventManager = new OutEventManager();
         RequestQueue queue = Volley.newRequestQueue(this);
@@ -154,8 +123,6 @@ public class MainActivity extends AppCompatActivity {
         getPixelPos();
         Constant.CAPA_POS = capaPos;
 
-        Thread canvasThread = new Thread(canvasRunnable); //
-        //canvasThread.start();
 //        new Timer().scheduleAtFixedRate(new TimerTask() {
 //            @Override
 //            public void run() {
@@ -165,7 +132,9 @@ public class MainActivity extends AppCompatActivity {
 //        },0,postRate);
 
         //set up listener
+
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
+        BottomNavigationViewHelper.disableShiftMode(navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener); //navigation bar listener
         collectButtonClickListener = new View.OnClickListener() {
             boolean execute = true;

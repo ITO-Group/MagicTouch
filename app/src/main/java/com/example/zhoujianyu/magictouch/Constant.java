@@ -13,6 +13,8 @@ public class Constant {
     public static final int FLUSH_RATE = 100;
     public static final int CLICK_INTERVAL = 1000;
     public static final int POST_RATE = 1000;
+    public static final int SLIDE_MAX_STICKS = 100;
+
 
     //电容相关
     public static final int ROW_NUM = 16;  //capa image row size

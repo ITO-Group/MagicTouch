@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.StringTokenizer;
 
 /**
@@ -45,28 +46,33 @@ class MyRect{
 public class EdgeTouchView extends View{
     private Paint mPaint;
     public final String TAG = "myData";
-    public boolean isInTouch = false;
     public int touchTime = 0;
-    public boolean isOutTouch = false;
     public int[][] rawCapacityData;
+    public int[][] historyImageStatus = new int[Constant.ROW_NUM][Constant.COL_NUM];
+    public int[][] timerMatrix = new int[Constant.ROW_NUM][Constant.COL_NUM];
+    public int[][] outEventMatrix = new int[Constant.ROW_NUM][Constant.COL_NUM]; //0代表无事件，1代表click事件，2代表slide事件
+    private int arounds[][] = {{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,-1},{-1,1},{1,1}}; //当膜的结构变了之后可能需要改
+
     public ArrayList<MyRect> rects = new ArrayList<>();
-    public ArrayList<MyRect> lastRects = new ArrayList<>();
 
     // define some outevent listener
     boolean listening = false;
-    public Handler mHandler = new Handler(){
-        public void handleMessage(Message msg){
-            EdgeTouchView.this.invalidate();
-        }
-    };
-    public OutClickListener outClickListener = null;
-    public OutSlideListener outSlideListener = null;
+    boolean isDrawPixel = false;
+    boolean isListeningOutSlideEvent = false;
+    boolean isListeningOutClickEvent = false;
+
+    public OnOutClickListener onOutClickListener = null;
+    public OnOutSlideListener onOutSlideListener = null;
     public TouchStatusAnalyzer touchStatusAnalyzer = new TouchStatusAnalyzer();
 
-    public void deepClone(){
-        for(int i = 0;i<rects.size();i++){
-            lastRects.add(rects.get(i).clone());
+    public int[][] deepClone(int[][] array){
+        int[][] copy = new int[Constant.ROW_NUM][Constant.COL_NUM];
+        for(int i = 0;i<array.length;i++){
+            for(int j = 0;j<array[i].length;j++){
+                copy[i][j] = array[i][j];
+            }
         }
+        return copy;
     }
 
     public EdgeTouchView(Context context, AttributeSet attrs){
@@ -75,31 +81,64 @@ public class EdgeTouchView extends View{
         // listening out events
         this.listening = true;
         listeningCapacityChange();
+
+        //初始化历史imagestatus
+        for(int i = 0;i<historyImageStatus.length;i++){
+            Arrays.fill(historyImageStatus[i],0);
+            Arrays.fill(timerMatrix[i],0);
+            Arrays.fill(outEventMatrix[i],0);
+        }
     }
 
-//    public boolean hasOutTouch(int[][]status){
-//        for(int i = 0;i<status.length;i++){
-//            for(int j = 0;j<status[i].length;j++){
-//                if(status[i][j]==1)return true;
-//            }
-//        }
-//        return false;
-//    }
+    public void drawPixel(int [][]imageStatus){
+        getDrawingPixel(imageStatus);  // 更新rects
+        EdgeTouchView.this.postInvalidate();
+    }
 
+    /**
+     * event listening related functions
+     */
     public void listeningCapacityChange(){
         Thread mainListeningThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while(listening){
                     try {
-//                        rawCapacityData = captureCapa();
                          int[][] imageStatus = getCurrentStatusImage();
                         // 对于blackboard,直接高亮point
                         // 数据准备
-                        rects.clear();
-                        getDrawingPixel(imageStatus);
-                        EdgeTouchView.this.postInvalidate();
+                        if(isDrawPixel){drawPixel(imageStatus);}
                         // 检测是否有outclick
+                        for(int i = 0;i<imageStatus.length;i++){
+                            for(int j = 0;j<imageStatus[i].length;j++){
+                                if(imageStatus[i][j] == 0){outEventMatrix[i][j]=0;}
+                                else if(imageStatus[i][j]==1){outEventMatrix[i][j]=1;}
+                                if(historyImageStatus[i][j]==imageStatus[i][j]) timerMatrix[i][j]+=1;
+                                else {
+                                    // status 发生变化
+                                    if(imageStatus[i][j]==0&&timerMatrix[i][j]<Constant.SLIDE_MAX_STICKS){
+                                        // 刚刚由1变成0
+                                        try{
+                                            if(imageStatus[i][j+1]==1){
+                                                Log.e("gg","sliding down");
+                                                outEventMatrix[i][j+1] = 2;
+                                            }
+                                            else if(imageStatus[i][j-1]==1){
+                                                Log.e("gg","sliding up");
+                                                outEventMatrix[i][j-1] = 2;
+                                            }
+                                            else if(outEventMatrix[i][j+1]==0&&outEventMatrix[i][j-1]==0){
+                                                if(timerMatrix[i][j+1]>Constant.SLIDE_MAX_STICKS&&timerMatrix[i][j-1]>Constant.SLIDE_MAX_STICKS){
+                                                    Log.e("gg","clicking");
+                                                }
+                                            }
+                                        }catch(Exception e){}
+                                    }
+                                    timerMatrix[i][j] = 0;
+                                }
+                            }
+                        }
+                        historyImageStatus = deepClone(imageStatus);
                         // 检测是否有outslide
 
                     }catch (IOException e){
@@ -111,7 +150,36 @@ public class EdgeTouchView extends View{
         mainListeningThread.start();
     }
 
+    public void setOnOutClickListener(@Nullable OnOutClickListener l){
+        enableListenToOutClickEvent();
+        this.onOutClickListener = l;
+    }
+    public void setOnOutSlideListener(@Nullable OnOutSlideListener l){
+        enableListenToOutSlideEvent();
+        this.onOutSlideListener = l;
+    }
+
+    public interface OnOutClickListener{
+        public boolean onOutClick(View v);
+    }
+    public interface OnOutSlideListener{
+        public boolean onOutSlide(View v);
+    }
+
+    /**
+     * Draw pixel related functions
+     */
+    public void enableDrawPixel(){isDrawPixel = true;}
+    public void disableDrawPixel(){isDrawPixel = false;}
+    public void enableListenToOutClickEvent(){isListeningOutClickEvent=true;}
+    public void disableListenToOutClickEvent(){isListeningOutClickEvent=false;}
+    public void enableListenToOutSlideEvent(){isListeningOutSlideEvent=true;}
+    public void disableListenToOutSlideEvent(){isListeningOutSlideEvent=false;}
+
     public void getDrawingPixel(int[][]status){
+        /**
+         * get current image pixel matrix and update edgeview's property rects
+         */
         for(int i = 0;i<Constant.ROW_NUM;i++){
             for(int j = 0;j<Constant.COL_NUM;j++){
                 if(status[i][j]>0){
@@ -128,7 +196,6 @@ public class EdgeTouchView extends View{
             }
         }
     }
-
     protected void onDraw(Canvas canvas){
         mPaint.setColor(Color.BLACK);
         canvas.drawRect(0, 0, getWidth(), getHeight(), mPaint);
@@ -150,30 +217,8 @@ public class EdgeTouchView extends View{
                 canvas.drawText(String.valueOf(rects.get(i).capacity),rects.get(i).left,rects.get(i).top,mPaint);
             }
         }
-        deepClone();
         super.onDraw(canvas);
-    }
-
-    public void getDrawData(ArrayList<MyRect> rects){
-        isOutTouch = true;
-        this.rects.clear();
-
-        this.rects = rects;
-    }
-
-    public void setOutClickListener(@Nullable OutClickListener l){
-        this.outClickListener = l;
-    }
-
-    public void setOutSlideListener(@Nullable OutSlideListener l){
-        this.outSlideListener = l;
-    }
-
-    public interface OutClickListener{
-        public boolean onClick(View v);
-    }
-    public interface OutSlideListener{
-        public boolean onSlide(View v);
+        rects.clear(); //清空rects
     }
 
     /***
@@ -187,7 +232,6 @@ public class EdgeTouchView extends View{
         int currentTouchPoints[][] = touchStatusAnalyzer.refineTouchPosition(this.rawCapacityData);  //当前outTouch 点集
         return currentTouchPoints;
     }
-
     public int[][] captureCapa()throws IOException{
         /***
          return a matrix that contains raw capacity sensing data

@@ -42,10 +42,12 @@ public class TouchStatusAnalyzer {
                 if(capacityData[i][j]>Constant.OUT_TOUCH_THRESHOLD){
                     boolean isCenter = true;
                     boolean redNeighbor = false;
+                    boolean isMaxPoint = true;
                     for(int p = 0;p<arounds.length;p++){
                         try{
-                            if(capacityData[i+arounds[p][0]][j+arounds[p][1]]<Constant.OUT_TOUCH_THRESHOLD){isCenter = false;break;}
-                            if(capacityData[i+arounds[p][0]][j+arounds[p][1]]>Constant.IN_TOUCH_THRESHOLD){redNeighbor = true;break;}
+                            if(capacityData[i+arounds[p][0]][j+arounds[p][1]]<Constant.OUT_TOUCH_THRESHOLD){isCenter = false;}
+                            if(capacityData[i+arounds[p][0]][j+arounds[p][1]]>Constant.IN_TOUCH_THRESHOLD){redNeighbor = true;}
+                            if(capacityData[i+arounds[p][0]][j+arounds[p][1]]>capacityData[i][j]){isMaxPoint = false;}
                         }catch(Exception e){
 
                         }
@@ -55,7 +57,12 @@ public class TouchStatusAnalyzer {
                         else if(capacityData[i][j]<Constant.OUT_TOUCH_MAXIMUM){
                             //检测周围是否有red point
                             if(redNeighbor){touchPoint[i][j]=2;}
-                            else touchPoint[i][j]=1;
+                            else{
+                                // 针对touch out进行单点选择，每个指头的touch out必须只对应一个像素点
+                                if(isMaxPoint){
+                                    touchPoint[i][j]=1;
+                                }
+                            }
 
                         }
                     }

@@ -30,8 +30,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 case R.id.navigation_home:
 //                    mTextMessage.setText(R.string.title_home);
                     return true;
-                case R.id.navigation_dashboard:
-                    return true;
+//                case R.id.navigation_dashboard:
+//                    return true;
                 case R.id.navigation_notifications:
                     //mTextMessage.setText(R.string.title_notifications);
                     return true;

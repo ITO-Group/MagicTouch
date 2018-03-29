@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">MagicTouch</string>
     <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+    <string name="title_dashboard">Google Map</string>
+    <string name="title_notifications">TouchBoard</string>
     <string name="title_activity_maps">Map</string>
-
     <string name="title_activity_blackboard">BlackboardActivity</string>
+    <string name="title_event_detection_demo">EventBoard</string>
 
 </resources>

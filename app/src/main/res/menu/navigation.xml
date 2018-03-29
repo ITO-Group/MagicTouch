@@ -12,8 +12,13 @@
         android:icon="@drawable/ic_dashboard_black_24dp"
         android:title="@string/title_dashboard" />
     <item
+        android:id="@+id/event_detection_demo"
+        android:icon="@drawable/ic_notifications_black_24dp"
+        android:title="@string/title_event_detection_demo" />
+    <item
         android:id="@+id/navigation_notifications"
         android:icon="@drawable/ic_notifications_black_24dp"
         android:title="@string/title_notifications" />
+
 
 </menu>
