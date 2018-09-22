@@ -94,6 +94,8 @@ public class OutEventManager {
         ArrayList<String> rawData = new ArrayList<>();
         String command[] = {"aptouch_daemon_debug", "diffdata"};
         Process process = new ProcessBuilder(new String[] {"aptouch_daemon_debug", "diffdata"}).start();
+        Log.e("hehe","what");
+
         InputStream procInputStream = process.getInputStream();
         InputStreamReader reader = new InputStreamReader(procInputStream);
         BufferedReader bufferedreader = new BufferedReader(reader);

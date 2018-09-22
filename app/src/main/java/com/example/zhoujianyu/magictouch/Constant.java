@@ -13,7 +13,8 @@ public class Constant {
     public static final int FLUSH_RATE = 100;
     public static final int CLICK_INTERVAL = 1000;
     public static final int POST_RATE = 1000;
-    public static final int SLIDE_MAX_STICKS = 100;
+    public static final int SLIDE_MAX_TIME = 500;
+    public static final int CLICK_MIN_TIME = 1500;
 
 
     //电容相关
@@ -22,7 +23,7 @@ public class Constant {
 
     public static final int OUT_TOUCH_THRESHOLD = 200;
     public static final int OUT_TOUCH_MAXIMUM = 1400;
-    public static final int IN_TOUCH_THRESHOLD = 1600;
+    public static final int IN_TOUCH_THRESHOLD = 1900;
 
     public static int PIXEL_WIDTH;
     public static int PIXEL_HEIGHT;

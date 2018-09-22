@@ -1,6 +1,7 @@
 package com.example.zhoujianyu.magictouch;
 
 import android.annotation.SuppressLint;
+import android.graphics.Color;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -8,6 +9,9 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.TextView;
+
+import org.w3c.dom.Text;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -33,6 +37,7 @@ public class BlackboardActivity extends AppCompatActivity {
     private static final int UI_ANIMATION_DELAY = 300;
     private final Handler mHideHandler = new Handler();
     private EdgeTouchView mContentView;
+    private TextView outEventTextView;
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
         @Override
@@ -91,19 +96,34 @@ public class BlackboardActivity extends AppCompatActivity {
         mVisible = true;
 //        mControlsView = findViewById(R.id.fullscreen_content_controls);
         mContentView = (EdgeTouchView) findViewById(R.id.touch);
+        outEventTextView = (TextView) findViewById(R.id.out_event_status);
+        outEventTextView.setText("NULL");
+        outEventTextView.setTextSize(20);
+        outEventTextView.setTextColor(Color.WHITE);
         // set ups for canvas view
-         mContentView.enableDrawPixel();
+        mContentView.enableDrawPixel();
+        mContentView.getTextView(outEventTextView);
 //        mContentView.setOnOutClickListener(new EdgeTouchView.OnOutClickListener() {
 //            @Override
 //            public boolean onOutClick(View v) {
-//                Log.e("gg","clicked!!!!!!!!!!");
+//                outEventTextView.setText("clicked");
+//                Log.e("gg","clicked!!!!");
 //                return true;
 //            }
 //        });
 //        mContentView.setOnOutSlideListener(new EdgeTouchView.OnOutSlideListener() {
 //            @Override
-//            public boolean onOutSlide(View v) {
-//                return false;
+//            public boolean onOutSlide(int direction) {
+//                if(direction==0){
+//                    //down
+//                    Log.e("gg","slide down");
+//                    outEventTextView.setText("down");
+//                }
+//                else{
+//                    outEventTextView.setText("up");
+//                    Log.e("gg","sliding up");
+//                }
+//                return true;
 //            }
 //        });
 
@@ -119,6 +139,7 @@ public class BlackboardActivity extends AppCompatActivity {
         // operations to prevent the jarring behavior of controls going away
         // while interacting with the UI.
 //        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+
     }
 
     @Override

@@ -111,9 +111,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
         touchView = (EdgeTouchView) findViewById(R.id.touch);
-//        touchView.enableDrawPixel();
+        touchView.enableDrawPixel();
         collectButton = (Button) findViewById(R.id.collect_button);
         outEventManager = new OutEventManager();
         RequestQueue queue = Volley.newRequestQueue(this);
@@ -123,6 +124,14 @@ public class MainActivity extends AppCompatActivity {
         getPixelPos();
         Constant.CAPA_POS = capaPos;
 
+        for(int i = 0;i<Constant.COL_NUM;i++){
+            int x = 0;
+            int y =Constant.CAPA_POS[0][i][1];
+            int dx =Constant.PIXEL_WIDTH;
+            int dy=Constant.PIXEL_HEIGHT;
+            int type = 1;
+            touchView.rects.add(new MyRect(x,y,x+dx,y+dy,i,type));
+        }
 //        new Timer().scheduleAtFixedRate(new TimerTask() {
 //            @Override
 //            public void run() {
@@ -190,7 +199,8 @@ public class MainActivity extends AppCompatActivity {
             int curY = 0;
             for(int j = 0;j<capaPos[i].length;j++){
                 capaPos[i][j][0] = curX;
-                capaPos[i][j][1] = curY+1*this.pixelHight;  //消除显示偏移
+//                capaPos[i][j][1] = curY+1*this.pixelHight;  //消除显示偏移
+                capaPos[i][j][1] = curY-1*this.pixelHight;
                 curY += this.pixelHight;
             }
             curX += this.pixelWidth;

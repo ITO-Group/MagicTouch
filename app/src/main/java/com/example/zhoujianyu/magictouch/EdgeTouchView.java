@@ -12,6 +12,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -50,7 +51,7 @@ public class EdgeTouchView extends View{
     public int[][] rawCapacityData;
     public int[][] historyImageStatus = new int[Constant.ROW_NUM][Constant.COL_NUM];
     public int[][] timerMatrix = new int[Constant.ROW_NUM][Constant.COL_NUM];
-    public int[][] outEventMatrix = new int[Constant.ROW_NUM][Constant.COL_NUM]; //0代表无事件，1代表click事件，2代表slide事件
+//    public int[][] outEventMatrix = new int[Constant.ROW_NUM][Constant.COL_NUM]; //0代表无事件，1代表click事件，2代表slide事件
     private int arounds[][] = {{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,-1},{-1,1},{1,1}}; //当膜的结构变了之后可能需要改
 
     public ArrayList<MyRect> rects = new ArrayList<>();
@@ -64,6 +65,7 @@ public class EdgeTouchView extends View{
     public OnOutClickListener onOutClickListener = null;
     public OnOutSlideListener onOutSlideListener = null;
     public TouchStatusAnalyzer touchStatusAnalyzer = new TouchStatusAnalyzer();
+    public TextView eventStatusTextView = null;
 
     public int[][] deepClone(int[][] array){
         int[][] copy = new int[Constant.ROW_NUM][Constant.COL_NUM];
@@ -74,7 +76,9 @@ public class EdgeTouchView extends View{
         }
         return copy;
     }
-
+    public void getTextView(TextView view){
+        eventStatusTextView = view;
+    }
     public EdgeTouchView(Context context, AttributeSet attrs){
         super(context,attrs);
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -86,7 +90,7 @@ public class EdgeTouchView extends View{
         for(int i = 0;i<historyImageStatus.length;i++){
             Arrays.fill(historyImageStatus[i],0);
             Arrays.fill(timerMatrix[i],0);
-            Arrays.fill(outEventMatrix[i],0);
+//            Arrays.fill(outEventMatrix[i],0);
         }
     }
 
@@ -104,32 +108,35 @@ public class EdgeTouchView extends View{
             public void run() {
                 while(listening){
                     try {
+                         long start_time = System.currentTimeMillis();
                          int[][] imageStatus = getCurrentStatusImage();
                         // 对于blackboard,直接高亮point
                         // 数据准备
-                        if(isDrawPixel){drawPixel(imageStatus);}
+//                        if(isDrawPixel){drawPixel(imageStatus);}
                         // 检测是否有outclick
                         for(int i = 0;i<imageStatus.length;i++){
                             for(int j = 0;j<imageStatus[i].length;j++){
-                                if(imageStatus[i][j] == 0){outEventMatrix[i][j]=0;}
-                                else if(imageStatus[i][j]==1){outEventMatrix[i][j]=1;}
-                                if(historyImageStatus[i][j]==imageStatus[i][j]) timerMatrix[i][j]+=1;
+                                if(historyImageStatus[i][j]==imageStatus[i][j]) timerMatrix[i][j]+=(System.currentTimeMillis()-start_time);
                                 else {
                                     // status 发生变化
-                                    if(imageStatus[i][j]==0&&timerMatrix[i][j]<Constant.SLIDE_MAX_STICKS){
+                                    if(imageStatus[i][j]==0&&timerMatrix[i][j]<Constant.SLIDE_MAX_TIME){
                                         // 刚刚由1变成0
                                         try{
                                             if(imageStatus[i][j+1]==1){
-                                                Log.e("gg","sliding down");
-                                                outEventMatrix[i][j+1] = 2;
+//                                                onOutSlideListener.onOutSlide(0);
+                                                eventStatusTextView.setText("slide down");
+                                                Log.e("gg","slide down");
                                             }
                                             else if(imageStatus[i][j-1]==1){
-                                                Log.e("gg","sliding up");
-                                                outEventMatrix[i][j-1] = 2;
+                                                Log.e("gg","slide up");
+                                                eventStatusTextView.setText("slide up");
+//                                                onOutSlideListener.onOutSlide(1);
                                             }
-                                            else if(outEventMatrix[i][j+1]==0&&outEventMatrix[i][j-1]==0){
-                                                if(timerMatrix[i][j+1]>Constant.SLIDE_MAX_STICKS&&timerMatrix[i][j-1]>Constant.SLIDE_MAX_STICKS){
-                                                    Log.e("gg","clicking");
+                                            else if(imageStatus[i][j+1]==0&&imageStatus[i][j-1]==0){
+                                                if(timerMatrix[i][j+1]>Constant.CLICK_MIN_TIME&&timerMatrix[i][j-1]>Constant.CLICK_MIN_TIME){
+//                                                    onOutClickListener.onOutClick(EdgeTouchView.this);
+                                                    Log.e("gg","click");
+                                                    eventStatusTextView.setText("click");
                                                 }
                                             }
                                         }catch(Exception e){}
@@ -163,7 +170,7 @@ public class EdgeTouchView extends View{
         public boolean onOutClick(View v);
     }
     public interface OnOutSlideListener{
-        public boolean onOutSlide(View v);
+        public boolean onOutSlide(int direction);
     }
 
     /**
@@ -197,6 +204,7 @@ public class EdgeTouchView extends View{
         }
     }
     protected void onDraw(Canvas canvas){
+        Log.e("gg",Integer.toString(rects.size()));
         mPaint.setColor(Color.BLACK);
         canvas.drawRect(0, 0, getWidth(), getHeight(), mPaint);
         for(int i = 0;i<rects.size();i++){
